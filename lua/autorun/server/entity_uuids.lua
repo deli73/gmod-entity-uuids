@@ -54,43 +54,16 @@ hook.Add("OnEntityCreated", "entity uuid on creation", function(ent)
   end)
 end)
 
--- override persist load to force UUID data to be read
--- this is a big hack lmao
-hook.Add("PostGamemodeLoaded", "entity uuid persist load override", function()
-  hook.Add("PersistenceLoad", "PersistenceLoad", function(name)
-    local data = file.Read("persist/" .. game.GetMap() .. "_" .. name .. ".txt")
-    if not data then return end
-
-    local tab = util.JSONToTable(data)
-    if not tab then return end
-    if not tab.Entities then return end
-    if not tab.Constraints then return end
-
-    local entities = duplicator.Paste(nil, tab.Entities, tab.Constraints)
-
-    MsgN("[Entity UUIDs] Loading persistent UUIDs...")
-    local count = 0
-    for k,ent in pairs(entities) do
-      ent:SetPersistent(true)
-      hook.Run("LoadCustomPersistData", ent, tab.Entities[k])
-      local data = tab.Entities[k]
-      if data then
-        if data.UUID then
-          ent.UUID = data.UUID
-          count = count + 1
-        end
-        if data.baseMapEnt then
-          ent.baseMapEnt = data.baseMapEnt
-        end
-      end
+hook.Add("LoadCustomPersistData", "entity uuids custom persist data", function(ent, data)
+  if data then
+    if data.UUID then
+      ent.UUID = data.UUID
     end
-    MsgN("[Entity UUIDs] " .. count .. " persistent IDs loaded." )
-  end)
+    if data.baseMapEnt then
+      ent.baseMapEnt = data.baseMapEnt
+    end
+  end
 end)
-
--- hook.Add("LoadCustomPersistData", "entity uuids custom persist data", function(ent, data)
-
--- end)
 
 hook.Add("PersistenceSave", "entity uuids on save map id fix", function(name)
   for _, ent in ents.Iterator() do
@@ -127,20 +100,11 @@ local function InitUUIDs()
 
     if ent:CreatedByMap() then --map created entity, give it the map creation id as a UUID
       ent.UUID = ent:MapCreationID()
-    else
-      if ent.UUID and ent.baseMapEnt then --REMOVE MATCHING MAP ENTITIES? TEMP/HACK/DEBUG
-        table.insert(to_remove, ent.baseMapEnt)
-      end
     end
     
     if ent.UUID then --entity has UUID already, register it
       load_with_id(ent)
     end
-  end
-
-  for i,v in ipairs(to_remove) do
-    local ent = ents.GetMapCreatedEntity(v)
-    if ent then ent:Remove() end
   end
   initialized = true
 end
