@@ -72,15 +72,25 @@ hook.Add("PostGamemodeLoaded", "entity uuid persist load override", function()
     local count = 0
     for k,ent in pairs(entities) do
       ent:SetPersistent(true)
-      local old_data = tab.Entities[k]
-      if old_data and old_data.UUID then
-        ent.UUID = old_data.UUID
-        count = count + 1
+      hook.Run("LoadCustomPersistData", ent, tab.Entities[k])
+      local data = tab.Entities[k]
+      if data then
+        if data.UUID then
+          ent.UUID = data.UUID
+          count = count + 1
+        end
+        if data.baseMapEnt then
+          ent.baseMapEnt = data.baseMapEnt
+        end
       end
     end
     MsgN("[Entity UUIDs] " .. count .. " persistent IDs loaded." )
   end)
 end)
+
+-- hook.Add("LoadCustomPersistData", "entity uuids custom persist data", function(ent, data)
+
+-- end)
 
 hook.Add("PersistenceSave", "entity uuids on save map id fix", function(name)
   for _, ent in ents.Iterator() do
@@ -108,7 +118,7 @@ end)
 
 local function InitUUIDs()
   MsgN("[Entity UUIDs] Initializing...")
-  local to_give_id = {}
+  local to_remove = {}
 
   for _, ent in ents.Iterator() do
     if ent:IsPlayer() then --can players even be here?
@@ -117,11 +127,20 @@ local function InitUUIDs()
 
     if ent:CreatedByMap() then --map created entity, give it the map creation id as a UUID
       ent.UUID = ent:MapCreationID()
+    else
+      if ent.UUID and ent.baseMapEnt then --REMOVE MATCHING MAP ENTITIES? TEMP/HACK/DEBUG
+        table.insert(to_remove, ent.baseMapEnt)
+      end
     end
     
     if ent.UUID then --entity has UUID already, register it
       load_with_id(ent)
     end
+  end
+
+  for i,v in ipairs(to_remove) do
+    local ent = ents.GetMapCreatedEntity(v)
+    if ent then ent:Remove() end
   end
   initialized = true
 end
