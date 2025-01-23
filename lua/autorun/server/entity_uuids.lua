@@ -1,6 +1,5 @@
 --[[
   UUIDs are stored in an entity's "UUID" key as an integer.
-  (Also, persistent map entities store their source entity's ID as baseMapEnt)
   Allegedly the precision works up to a value of 1e+14 (100 trillion)Should be plenty of values lmao.
   We're just gonna go up to 1e+10 (10 billion)
   Map-created entities get priority access to the numbers less than 10000
@@ -59,16 +58,12 @@ hook.Add("LoadCustomPersistData", "entity uuids custom persist data", function(e
     if data.UUID then
       ent.UUID = data.UUID
     end
-    if data.baseMapEnt then
-      ent.baseMapEnt = data.baseMapEnt
-    end
   end
 end)
 
 hook.Add("PersistenceSave", "entity uuids on save map id fix", function(name)
   for _, ent in ents.Iterator() do
     if ent:CreatedByMap() and ent:GetPersistent() then
-      ent.baseMapEnt = ent:MapCreationID()
       ents_by_uuid[ent.UUID] = nil
       give_new_id(ent)
     end
